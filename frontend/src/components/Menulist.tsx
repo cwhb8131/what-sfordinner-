@@ -7,9 +7,15 @@ import { useDrag, useDrop } from "react-dnd";
 import { ItemTypes } from "./ItemTypes"; // ドラッグアイテムタイプを定義
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { supabase } from '../../../utils/supabase';
 
+import {
+  getMenu,
+  updateMenu,
+  clearMenu,
+} from '../../../utils/supabaseFunction'
 
-const API_URL = "http://localhost:3000/menu/";
+// const API_URL = "http://localhost:3000/menu/";
 
 interface Menu {
   id: number;
@@ -31,32 +37,99 @@ const MenuList: React.FC = () => {
     fetchMenu();
   }, []);
 
-  const fetchMenu = () => {
-    fetch(API_URL)
-      .then((res) => res.json())
-      .then((data: Menu[]) => {
-        setMenus(data); // メニューリストを更新
-      });
+  // const fetchMenu = () => {
+  //   fetch(API_URL)
+  //     .then((res) => res.json())
+  //     .then((data: Menu[]) => {
+  //       setMenus(data); // メニューリストを更新
+  //     });
+  // };
+
+  // const updateMenu = (id: number, menu: string, recipeurl: string) => {
+  //   const json = {
+  //     menu,
+  //     recipeurl,
+  //   };
+
+  //   fetch(`${API_URL}${id}`, {
+  //     method: "PUT",
+  //     body: JSON.stringify(json),
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //   }).then(() => {
+  //     fetchMenu(); // メニューを再取得してリストを更新
+  //   });
+  // };
+  const fetchMenu = async () => {
+    try {
+      // Supabaseからメニューリストを取得
+      const { data, error } = await supabase
+        .from('menus') // "menus"テーブルを指定
+        .select('*'); // すべてのカラムを取得
+  
+      if (error) {
+        throw error; // エラーハンドリング
+      }
+  
+      // メニューリストを更新
+      setMenus(data);
+    } catch (error) {
+      console.error('Error fetching menus:', error);
+    }
   };
 
-  const updateMenu = (id: number, menu: string, recipeurl: string) => {
+  const updateMenu = async (id: number, menu: string, recipeurl: string) => {
     const json = {
       menu,
       recipeurl,
     };
-
-    fetch(`${API_URL}${id}`, {
-      method: "PUT",
-      body: JSON.stringify(json),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).then(() => {
+  
+    try {
+      const { data, error } = await supabase
+        .from('menus') 
+        .update(json)
+        .eq('id', id); // idが一致する行を更新
+  
+      if (error) {
+        throw error;
+      }
+  
       fetchMenu(); // メニューを再取得してリストを更新
-    });
+    } catch (error) {
+      console.error('Error updating menu:', error);
+    }
   };
 
-  const clearMenu = (id: number) => {
+  // const clearMenu = (id: number) => {
+  //   const updatedMenus = menus.map((menuItem) => {
+  //     if (menuItem.id === id) {
+  //       return {
+  //         ...menuItem,
+  //         menu: "",
+  //         recipeurl: "",
+  //       };
+  //     }
+  //     return menuItem;
+  //   });
+
+  //   setMenus(updatedMenus);
+
+  //   const json = {
+  //     menu: "",
+  //     recipeurl: "",
+  //   };
+
+  //   fetch(`${API_URL}${id}`, {
+  //     method: "PUT",
+  //     body: JSON.stringify(json),
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+  //   });
+  // };
+  const clearMenu = async (id: number) => {
+    // メニューの状態を更新
     const updatedMenus = menus.map((menuItem) => {
       if (menuItem.id === id) {
         return {
@@ -67,21 +140,15 @@ const MenuList: React.FC = () => {
       }
       return menuItem;
     });
-
+  
+    // メニューリストを更新
     setMenus(updatedMenus);
-
-    const json = {
-      menu: "",
-      recipeurl: "",
-    };
-
-    fetch(`${API_URL}${id}`, {
-      method: "PUT",
-      body: JSON.stringify(json),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+  
+    // Supabaseでメニューを更新
+    const { data, error } = await supabase
+      .from('menus') // "menus"テーブル
+      .update({ menu: "", recipeurl: "" }) // クリアするデータ
+      .eq('id', id); // idで一致するレコードを更新
   };
 
   const handleEditMenu = (menu: Menu) => {
@@ -94,12 +161,40 @@ const MenuList: React.FC = () => {
   };
 
   // ドラッグ用
-  const moveMenu = (draggedIndex: number, hoveredIndex: number) => {
+  // const moveMenu = (draggedIndex: number, hoveredIndex: number) => {
+  //   const newMenus = [...menus];
+  //   const draggedMenu = newMenus[draggedIndex];
+  //   newMenus.splice(draggedIndex, 1);
+  //   newMenus.splice(hoveredIndex, 0, draggedMenu);
+  //   setMenus(newMenus);
+  // };
+  const moveMenu = async (draggedIndex: number, hoveredIndex: number) => {
     const newMenus = [...menus];
     const draggedMenu = newMenus[draggedIndex];
     newMenus.splice(draggedIndex, 1);
     newMenus.splice(hoveredIndex, 0, draggedMenu);
+  
+    // フロントエンドで順番を更新
     setMenus(newMenus);
+  
+    // 順番をSupabaseに反映させる
+    try {
+      // 順番が更新された各メニューに対して順番(order)を再設定
+      for (let i = 0; i < newMenus.length; i++) {
+        const { id } = newMenus[i];
+        const { error } = await supabase
+          .from('menus')  // "menus"テーブル
+          .update({ order: i + 1 })  // orderカラムを更新（1から始まる順番）
+          .eq('id', id); // idで一致するメニューを更新
+  
+        if (error) {
+          console.error('Error updating menu order:', error);
+          break;
+        }
+      }
+    } catch (error) {
+      console.error('Error in moveMenu:', error);
+    }
   };
 
   return (

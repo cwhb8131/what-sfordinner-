@@ -3,4 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'process.env': {} // 空のオブジェクトを定義してエラーを回避
+  }
 });

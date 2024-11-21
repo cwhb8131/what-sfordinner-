@@ -9,6 +9,11 @@ import { HTML5Backend } from 'react-dnd-html5-backend';
 import Weekday from './components/Weekday';
 
 
+interface Menu {
+  id: number;
+  menu: string;
+  recipeurl: string;
+}
 
 const App: React.FC = () => {
   return (
