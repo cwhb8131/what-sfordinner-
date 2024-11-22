@@ -25,9 +25,9 @@ const App: React.FC = () => {
         <h1 className='headertitle'>What's for Dinner?</h1>
         <div className='flex pl-8'>
           <Weekday/>
-          <DndProvider backend={HTML5Backend}>
+          {/* <DndProvider backend={HTML5Backend}> */}
             <MenuList/>
-          </DndProvider>
+          {/* </DndProvider> */}
         </div>
         <div className='flex gap-4 mt-4'> 
           <HelpModal/>

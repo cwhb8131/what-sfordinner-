@@ -5,17 +5,14 @@ import MenuForm from "./MenuForm";
 import TrashModal from "./TrashModal";
 import { useDrag, useDrop } from "react-dnd";
 import { ItemTypes } from "./ItemTypes"; // ドラッグアイテムタイプを定義
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-import { supabase } from '../../../utils/supabase';
+import { supabase } from '../../utils/supabase';
 
 import {
   getMenu,
   updateMenu,
   clearMenu,
-} from '../../../utils/supabaseFunction'
+} from '../../utils/supabaseFunction'
 
-// const API_URL = "http://localhost:3000/menu/";
 
 interface Menu {
   id: number;
@@ -34,43 +31,23 @@ const MenuList: React.FC = () => {
   const [menuToClear, setMenuToClear] = useState<Menu | null>(null); // クリアするメニュー
 
   useEffect(() => {
-    fetchMenu();
+    getMenu();
   }, []);
 
-  // const fetchMenu = () => {
-  //   fetch(API_URL)
-  //     .then((res) => res.json())
-  //     .then((data: Menu[]) => {
-  //       setMenus(data); // メニューリストを更新
-  //     });
-  // };
 
-  // const updateMenu = (id: number, menu: string, recipeurl: string) => {
-  //   const json = {
-  //     menu,
-  //     recipeurl,
-  //   };
-
-  //   fetch(`${API_URL}${id}`, {
-  //     method: "PUT",
-  //     body: JSON.stringify(json),
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //     },
-  //   }).then(() => {
-  //     fetchMenu(); // メニューを再取得してリストを更新
-  //   });
-  // };
-  const fetchMenu = async () => {
+  const getMenu = async () => {
     try {
       // Supabaseからメニューリストを取得
       const { data, error } = await supabase
         .from('menus') // "menus"テーブルを指定
-        .select('*'); // すべてのカラムを取得
+        .select('*') // すべてのカラムを取得
+        .order('order', { ascending: true }); 
+        console.log('Supabase query result:', data, error);
+
   
-      if (error) {
-        throw error; // エラーハンドリング
-      }
+      if (error) throw error; // エラーハンドリング
+      console.log(data);
+      
   
       // メニューリストを更新
       setMenus(data);
@@ -95,39 +72,13 @@ const MenuList: React.FC = () => {
         throw error;
       }
   
-      fetchMenu(); // メニューを再取得してリストを更新
+      getMenu(); // メニューを再取得してリストを更新
     } catch (error) {
       console.error('Error updating menu:', error);
     }
   };
 
-  // const clearMenu = (id: number) => {
-  //   const updatedMenus = menus.map((menuItem) => {
-  //     if (menuItem.id === id) {
-  //       return {
-  //         ...menuItem,
-  //         menu: "",
-  //         recipeurl: "",
-  //       };
-  //     }
-  //     return menuItem;
-  //   });
-
-  //   setMenus(updatedMenus);
-
-  //   const json = {
-  //     menu: "",
-  //     recipeurl: "",
-  //   };
-
-  //   fetch(`${API_URL}${id}`, {
-  //     method: "PUT",
-  //     body: JSON.stringify(json),
-  //     headers: {
-  //       "Content-Type": "application/json",
-  //     },
-  //   });
-  // };
+  
   const clearMenu = async (id: number) => {
     // メニューの状態を更新
     const updatedMenus = menus.map((menuItem) => {
@@ -161,13 +112,6 @@ const MenuList: React.FC = () => {
   };
 
   // ドラッグ用
-  // const moveMenu = (draggedIndex: number, hoveredIndex: number) => {
-  //   const newMenus = [...menus];
-  //   const draggedMenu = newMenus[draggedIndex];
-  //   newMenus.splice(draggedIndex, 1);
-  //   newMenus.splice(hoveredIndex, 0, draggedMenu);
-  //   setMenus(newMenus);
-  // };
   const moveMenu = async (draggedIndex: number, hoveredIndex: number) => {
     const newMenus = [...menus];
     const draggedMenu = newMenus[draggedIndex];
@@ -211,7 +155,7 @@ const MenuList: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {menus.map((menuItem, index) => (
+           {/* {menus.map((menuItem, index) => (
             <DraggableMenuItem
               key={menuItem.id}
               index={index}
@@ -220,6 +164,37 @@ const MenuList: React.FC = () => {
               handleEditMenu={handleEditMenu}
               handleShowClearModal={handleShowClearModal}
             />
+          ))}  */}
+           {menus.map((menuItem, index) => (
+            <tr>
+              <td className="text-lg text-info">
+                {menuItem.menu || "No Menu"}
+              </td>
+              <td>
+                <a
+                  href={menuItem.recipeurl || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link link-secondary"
+                >
+                  {menuItem.recipeurl || "No Recipe URL"}
+                </a>
+              </td>
+              <td>
+                <button
+                  className="text-2xl text-primary"
+                  onClick={() => handleEditMenu(menuItem)}
+                >
+                  <BiEditAlt />
+                </button>
+                <button
+                  className="ml-8 text-2xl text-primary"
+                  onClick={() => handleShowClearModal(menuItem)}
+                >
+                  <FaTrashAlt />
+                </button>
+              </td>
+            </tr>
           ))}
         </tbody>
       </table>
